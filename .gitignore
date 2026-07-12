@@ -1,0 +1,22 @@
+# Java
+backend/target/
+*.class
+
+# Maven
+.mvn/timing.properties
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.*
+backend/src/main/resources/application-local.properties
