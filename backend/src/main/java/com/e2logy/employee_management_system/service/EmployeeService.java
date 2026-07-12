@@ -3,14 +3,20 @@ package com.e2logy.employee_management_system.service;
 import com.e2logy.employee_management_system.dto.EmployeeRequest;
 import com.e2logy.employee_management_system.dto.EmployeeResponse;
 import com.e2logy.employee_management_system.dto.ManagerOptionResponse;
+import com.e2logy.employee_management_system.dto.PageResponse;
+import com.e2logy.employee_management_system.entity.Department;
 import com.e2logy.employee_management_system.entity.Employee;
 import com.e2logy.employee_management_system.exception.DuplicateResourceException;
 import com.e2logy.employee_management_system.exception.ResourceNotFoundException;
 import com.e2logy.employee_management_system.repository.EmployeeRepository;
+import com.e2logy.employee_management_system.specification.EmployeeSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +40,51 @@ public class EmployeeService {
     @Transactional(readOnly = true)
     public EmployeeResponse getEmployeeById(Long id) {
         return toResponse(findEmployeeById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> getEmployees(
+            String search,
+            Department department,
+            Long managerId,
+            LocalDate joiningDateFrom,
+            LocalDate joiningDateTo,
+            Pageable pageable
+    ) {
+        if (joiningDateFrom != null && joiningDateTo != null && joiningDateFrom.isAfter(joiningDateTo)) {
+            throw new IllegalArgumentException("Joining date from must be on or before joining date to");
+        }
+
+        Page<EmployeeResponse> employeePage = employeeRepository.findAll(
+                        EmployeeSpecification.withFilters(search, department, managerId, joiningDateFrom, joiningDateTo),
+                        pageable
+                )
+                .map(this::toResponse);
+
+        return new PageResponse<>(
+                employeePage.getContent(),
+                employeePage.getNumber(),
+                employeePage.getSize(),
+                employeePage.getTotalElements(),
+                employeePage.getTotalPages(),
+                employeePage.isFirst(),
+                employeePage.isLast()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManagerOptionResponse> getManagerOptions() {
+        return employeeRepository.findAllByOrderByFullNameAsc().stream()
+                .map(employee -> new ManagerOptionResponse(
+                        employee.getId(),
+                        employee.getFullName(),
+                        employee.getEmployeeCode()
+                ))
+                .toList();
+    }
+
+    public List<Department> getDepartmentOptions() {
+        return List.of(Department.values());
     }
 
     @Transactional
